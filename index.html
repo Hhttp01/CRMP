@@ -3,98 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRMP - מערכת ניהול וחיוץ</title>
+    <title>CRMP - Mobile Ready</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
-    <div class="main-container" id="invoice-content">
-        <header class="setup-header">
-            <div class="business-info">
-                <div class="logo-box" onclick="document.getElementById('logo-upload').click()">
-                    <img id="user-logo" src="https://via.placeholder.com/150?text=Upload+Logo" alt="לוגו">
-                    <input type="file" id="logo-upload" hidden accept="image/*" onchange="previewLogo(event)">
-                </div>
-                <input type="text" id="business-name-input" placeholder="שם העסק שלך" class="editable-title">
-            </div>
-            <div class="doc-meta">
-                <div class="system-badge">CRMP v1.1</div>
-                <div class="doc-number">מספר מסמך: <span id="doc-num-display">1001</span></div>
-            </div>
-        </header>
-
-        <section class="invoice-section">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>סוג מסמך</label>
-                    <select id="doc-type">
-                        <option value="חשבונית מס">חשבונית מס</option>
-                        <option value="חשבונית מס קבלה">חשבונית מס קבלה</option>
-                        <option value="הצעת מחיר">הצעת מחיר</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>לקוח</label>
-                    <div class="select-with-btn">
-                        <select id="client-select">
-                            <option value="">בחר לקוח...</option>
-                        </select>
-                        <button type="button" class="btn-small" onclick="addNewClient()">+ חדש</button>
+    <div class="app-wrapper">
+        <div class="main-container" id="invoice-content">
+            <header class="setup-header">
+                <div class="business-info">
+                    <div class="logo-box" onclick="document.getElementById('logo-upload').click()">
+                        <img id="user-logo" src="https://via.placeholder.com/100?text=Logo" alt="לוגו">
+                        <input type="file" id="logo-upload" hidden accept="image/*" onchange="previewLogo(event)">
+                    </div>
+                    <div class="name-area">
+                        <input type="text" id="business-name-input" placeholder="שם העסק שלך" class="editable-title">
+                        <div class="system-badge">CRMP Professional</div>
                     </div>
                 </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>שיעור מע"מ (%)</label>
-                    <input type="number" id="vat-rate" value="17" step="0.5" oninput="calculate()">
+                <div class="doc-meta">
+                    <div class="doc-number">מסמך מס': <span id="doc-num-display">1001</span></div>
+                    <div class="date-display" id="current-date-display"></div>
                 </div>
-                <div class="form-group">
-                    <label>תאריך</label>
-                    <input type="date" id="doc-date">
+            </header>
+
+            <section class="invoice-section">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>סוג מסמך</label>
+                        <select id="doc-type">
+                            <option>חשבונית מס</option>
+                            <option>חשבונית מס קבלה</option>
+                            <option>הצעת מחיר</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>לקוח</label>
+                        <div class="client-row">
+                            <select id="client-select"><option value="">בחר לקוח...</option></select>
+                            <button type="button" class="btn-plus" onclick="addNewClient()">+</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th>תיאור השירות/מוצר</th>
-                        <th width="80">כמות</th>
-                        <th width="100">מחיר</th>
-                        <th width="100">סה"כ</th>
-                    </tr>
-                </thead>
-                <tbody id="items-body">
-                    <tr>
-                        <td><input type="text" placeholder="הקלד תיאור..."></td>
-                        <td><input type="number" class="qty" value="1" oninput="calculate()"></td>
-                        <td><input type="number" class="price" value="0" oninput="calculate()"></td>
-                        <td class="row-total">0.00 ₪</td>
-                    </tr>
-                </tbody>
-            </table>
-            <button type="button" class="btn-add-row" id="hide-on-pdf-1" onclick="addRow()">+ הוסף שורה</button>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>מע"מ (%)</label>
+                        <input type="number" id="vat-rate" value="17" oninput="calculate()">
+                    </div>
+                    <div class="form-group">
+                        <label>תאריך</label>
+                        <input type="date" id="doc-date" onchange="updateDateDisplay()">
+                    </div>
+                </div>
 
-            <div class="summary-box">
-                <p>סה"כ לפני מע"מ: <span id="subtotal">0.00</span> ₪</p>
-                <p>מע"מ: <span id="vat-amount">0.00</span> ₪</p>
-                <hr>
-                <h3>סה"כ לתשלום: <span id="final-total">0.00</span> ₪</h3>
-            </div>
+                <div class="table-container">
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>תיאור</th>
+                                <th>כמות</th>
+                                <th>מחיר</th>
+                                <th>סה"כ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-body">
+                            <tr>
+                                <td><input type="text" placeholder="שירות/מוצר" class="item-desc"></td>
+                                <td><input type="number" class="qty" value="1" oninput="calculate()"></td>
+                                <td><input type="number" class="price" value="0" oninput="calculate()"></td>
+                                <td class="row-total">0.00 ₪</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn-add-row" onclick="addRow()">+ הוסף שורה</button>
 
-            <div class="signature-section">
-                <p>חתימה:</p>
-                <canvas id="sig-canvas" width="300" height="100"></canvas>
-                <button type="button" class="btn-small" id="hide-on-pdf-2" onclick="clearSig()">נקה חתימה</button>
-            </div>
-        </section>
+                <div class="summary-wrapper">
+                    <div class="summary-box">
+                        <div class="sum-row"><span>לפני מע"מ:</span> <span id="subtotal">0.00</span> ₪</div>
+                        <div class="sum-row"><span>מע"מ:</span> <span id="vat-amount">0.00</span> ₪</div>
+                        <div class="sum-row total"><span>סה"כ:</span> <span id="final-total">0.00</span> ₪</div>
+                    </div>
+                </div>
+
+                <div class="signature-area">
+                    <label>חתימה:</label>
+                    <canvas id="sig-canvas"></canvas>
+                    <button type="button" class="btn-clear" onclick="clearSig()">נקה חתימה</button>
+                </div>
+            </section>
+        </div>
+
+        <div class="sticky-actions">
+            <button class="btn-main" onclick="generatePDF()">הורד PDF</button>
+            <button class="btn-share" onclick="shareDoc()">WhatsApp</button>
+        </div>
     </div>
-
-    <div class="actions">
-        <button class="btn-main" onclick="generatePDF()">הפק PDF ושמור</button>
-        <button class="btn-share" onclick="shareDoc()">שתף ב-WhatsApp</button>
-    </div>
-
     <script src="script.js"></script>
 </body>
 </html>
