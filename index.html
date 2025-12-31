@@ -2,114 +2,260 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRMP Infinity 2030</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <title>Master System - חברת אחזקה אוטונומית</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --ex-green: #217346;
+            --ex-light-green: #eaf2ed;
+            --sidebar-width: 280px;
+            --header-height: 60px;
+            --bg-color: #f3f2f1;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; background: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
+
+        /* סייר נכסים (היררכי) */
+        .excel-sidebar {
+            width: var(--sidebar-width);
+            background: white;
+            border-left: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .sidebar-head { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+        .search-box input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+        .tree-container { flex: 1; overflow-y: auto; padding: 10px; }
+        .tree-item { padding: 8px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
+        .tree-item:hover { background: var(--ex-light-green); }
+        .sub-item { padding-right: 25px; font-size: 13px; color: #555; display: none; }
+
+        /* אזור התוכן המרכזי */
+        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        header {
+            height: var(--header-height);
+            background: var(--ex-green);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+
+        .nav-tabs { display: flex; gap: 10px; }
+        .nav-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .nav-btn.active { background: white; color: var(--ex-green); font-weight: bold; }
+
+        /* דפים (Views) */
+        .view { display: none; padding: 20px; height: calc(100vh - var(--header-height)); overflow-y: auto; }
+        .view.active { display: block; }
+
+        /* עורך גליונות (שדרוג 20) */
+        .formula-bar { display: flex; background: #eee; padding: 5px; border: 1px solid #ccc; margin-bottom: 10px; }
+        .sheet-container { background: white; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1000px; margin: 0 auto; }
+        .excel-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .excel-table th, .excel-table td { border: 1px solid #ddd; padding: 8px; }
+
+        /* דאשבורד BI (שדרוג 20) */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .kpi-card { background: white; padding: 20px; border-radius: 8px; text-align: center; border-top: 4px solid var(--ex-green); }
+        .chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; height: 350px; }
+        .glass { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+        /* ניהול מדיה וסייר קבצים (שדרוג 20) */
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .file-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; }
+        .file-card:hover { border-color: var(--ex-green); transform: translateY(-2px); transition: 0.2s; }
+        .folder { background: #fffde7; }
+    </style>
 </head>
 <body>
-    <div class="app-shell">
-        <aside class="sidebar">
-            <div class="logo-brand">CRMP ∞</div>
-            <nav>
-                <button onclick="showPage('invoice')" class="nav-item active">📄 הפקה</button>
-                <button onclick="showPage('clients')" class="nav-item">👥 לקוחות</button>
-                <button onclick="showPage('archive')" class="nav-item">📊 ארכיון</button>
-                <button onclick="backupData()" class="nav-item" style="margin-top: auto;">💾 גיבוי</button>
-            </nav>
-        </aside>
 
-        <main class="content-area">
-            <section id="page-invoice" class="page active">
-                <div class="glass-card main-invoice" id="invoice-content">
-                    <header class="invoice-header">
-                        <div class="biz-info">
-                            <div class="logo-box" onclick="document.getElementById('logo-upload').click()">
-                                <img id="user-logo" src="https://via.placeholder.com/100" alt="לוגו">
-                                <input type="file" id="logo-upload" hidden accept="image/*" onchange="previewLogo(event)">
-                            </div>
-                            <input type="text" id="biz-name" placeholder="שם העסק שלך" class="input-minimal biz-title">
-                        </div>
-                        <div class="doc-info">
-                            <h1 id="doc-title-display">חשבונית מס</h1>
-                            <p>מספר: <span id="doc-num">1001</span></p>
-                        </div>
-                    </header>
-
-                    <div class="invoice-body">
-                        <div class="row-grid">
-                            <select id="doc-type" onchange="updateDocType()">
-                                <option>חשבונית מס</option>
-                                <option>הצעת מחיר</option>
-                            </select>
-                            <select id="client-select-main"></select>
-                        </div>
-                        <table class="modern-table">
-                            <thead><tr><th>תיאור</th><th>כמות</th><th>מחיר</th><th>סה"כ</th></tr></thead>
-                            <tbody id="items-body">
-                                <tr>
-                                    <td><input type="text" class="input-minimal" placeholder="שירות/מוצר"></td>
-                                    <td><input type="number" class="input-minimal qty" value="1" oninput="calculate()"></td>
-                                    <td><input type="number" class="input-minimal price" value="0" oninput="calculate()"></td>
-                                    <td class="row-total">0.00 ₪</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <button class="btn-add" onclick="addRow()">+ הוסף שורה</button>
-                    </div>
-
-                    <div class="invoice-footer">
-                        <div class="signature-box">
-                            <canvas id="sig-canvas"></canvas>
-                        </div>
-                        <div class="summary-box">
-                            <p>לפני מע"מ: <span id="subtotal">0.00</span> ₪</p>
-                            <h3>סה"כ: <span id="total">0.00</span> ₪</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="actions-floating">
-                    <button class="btn-primary" onclick="generatePDF()">הפק PDF</button>
-                </div>
-            </section>
-
-            <section id="page-clients" class="page">
-                <div class="page-header">
-                    <h2>ניהול לקוחות 2030</h2>
-                    <button class="btn-primary" onclick="openClientModal()">+ לקוח חדש</button>
-                </div>
-                <div class="search-bar">
-                    <input type="text" id="client-search" placeholder="חפש לקוח..." oninput="filterClients()">
-                </div>
-                <div class="client-grid" id="client-list">
-                    </div>
-            </section>
-
-            <section id="page-archive" class="page">
-                <h2>ארכיון מסמכים</h2>
-                <div class="glass-card">
-                    <table class="modern-table">
-                        <thead><tr><th>מספר</th><th>לקוח</th><th>סכום</th><th>תאריך</th></tr></thead>
-                        <tbody id="archive-list"></tbody>
-                    </table>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <div id="client-modal" class="modal">
-        <div class="modal-content glass-card">
-            <h3>פרטי לקוח חדש</h3>
-            <input type="text" id="new-client-name" placeholder="שם מלא">
-            <input type="text" id="new-client-email" placeholder="אימייל">
-            <input type="text" id="new-client-phone" placeholder="טלפון">
-            <div class="modal-btns">
-                <button onclick="saveClient()" class="btn-primary">שמור</button>
-                <button onclick="closeClientModal()" class="btn-text">ביטול</button>
+    <aside class="excel-sidebar">
+        <div class="sidebar-head">
+            <div class="search-box">
+                <input type="text" id="global-search" placeholder="🔍 חיפוש מהיר..." oninput="filterTree()">
             </div>
         </div>
-    </div>
+        <div class="tree-container" id="tree-root">
+            </div>
+    </aside>
 
-    <script src="script.js"></script>
+    <main>
+        <header>
+            <div class="logo">MASTER SYSTEM v1.0 | <strong>ניהול אחזקה</strong></div>
+            <nav class="nav-tabs">
+                <button class="nav-btn active" onclick="switchView('dashboard')">דאשבורד BI</button>
+                <button class="nav-btn" onclick="switchView('editor')">עורך גליונות</button>
+                <button class="nav-btn" onclick="switchView('vault')">תיקיות ומדיה</button>
+            </nav>
+        </header>
+
+        <section id="view-dashboard" class="view active">
+            <div class="kpi-grid">
+                <div class="kpi-card"><span>הכנסות (ריטיינר)</span><h3>₪ 124,000</h3></div>
+                <div class="kpi-card" style="border-color: #d83b01"><span>חובות פתוחים</span><h3>₪ 18,500</h3></div>
+                <div class="kpi-card"><span>קריאות פתוחות</span><h3>14</h3></div>
+                <div class="kpi-card"><span>ניצול תקציב</span><h3>88%</h3></div>
+            </div>
+            <div class="chart-row">
+                <div class="glass"><canvas id="mainChart"></canvas></div>
+                <div class="glass"><canvas id="distChart"></canvas></div>
+            </div>
+        </section>
+
+        <section id="view-editor" class="view">
+            <div class="formula-bar">
+                <div style="background:white; padding:5px 15px; border:1px solid #ccc; margin-left:10px;" id="cell-ref">A1</div>
+                <input type="text" id="formula-input" style="flex:1" placeholder="הקלד תוכן או נוסחה...">
+                <button onclick="addExcelRow()" style="margin-right:10px;">+ הוסף שורה</button>
+            </div>
+            <div class="sheet-container" id="sheet">
+                <div style="display:flex; justify-content:space-between; border-bottom:2px solid var(--ex-green); padding-bottom:10px;">
+                    <div>
+                        <h2 id="client-name-display">בחר לקוח מהסייר</h2>
+                        <p id="project-name-display">בחר בניין...</p>
+                    </div>
+                    <div style="text-align:left">
+                        <p>מספר מסמך: <strong>1089</strong></p>
+                        <p>תאריך: 31/12/2025</p>
+                    </div>
+                </div>
+                <table class="excel-table">
+                    <thead>
+                        <tr style="background:#f3f3f3">
+                            <th width="50">#</th>
+                            <th>תיאור עבודה/פריט</th>
+                            <th width="80">כמות</th>
+                            <th width="120">מחיר יחידה</th>
+                            <th width="120">סה"כ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sheet-body">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-vault" class="view">
+            <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+                <h2 id="vault-title">תיקיות בניין: כללי</h2>
+                <div>
+                    <button onclick="createNewFolder()">+ תיקייה חדשה</button>
+                    <button class="primary-btn" style="background:var(--ex-green); color:white; padding:10px;">📤 העלאת קבצים/סרטונים</button>
+                </div>
+            </div>
+            <div class="file-grid" id="file-system">
+                <div class="file-card folder">📁 בדיקות שנתיות</div>
+                <div class="file-card folder">📁 סרטוני טכנאים</div>
+                <div class="file-card folder">📁 חוזים ואישורים</div>
+                <div class="file-card">📄 אישור כיבוי אש.pdf</div>
+                <div class="file-card">🎥 תיקון גנרטור.mp4</div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // בסיס נתונים דמו לשימוש ראשוני
+        const db = [
+            { id: 1, name: "אחזקות אביב", projects: ["מגדל המאה", "בניין הדרים"] },
+            { id: 2, name: "קבוצת עזריאלי", projects: ["מגדל עגול", "מגדל משולש"] }
+        ];
+
+        // אתחול המערכת
+        window.onload = () => {
+            renderTree();
+            initCharts();
+            for(let i=0; i<5; i++) addExcelRow();
+        };
+
+        // ניהול תצוגות
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // בניית סייר הנכסים
+        function renderTree() {
+            const root = document.getElementById('tree-root');
+            db.forEach(client => {
+                const group = document.createElement('div');
+                group.className = 'tree-group';
+                group.innerHTML = `<div class="tree-item" onclick="toggleSub('${client.id}')">📂 ${client.name}</div>`;
+                const subs = document.createElement('div');
+                subs.id = 'subs-' + client.id;
+                client.projects.forEach(p => {
+                    subs.innerHTML += `<div class="tree-item sub-item" onclick="selectProject('${client.name}', '${p}')">🏢 ${p}</div>`;
+                });
+                group.appendChild(subs);
+                root.appendChild(group);
+            });
+        }
+
+        function toggleSub(id) {
+            const el = document.getElementById('subs-' + id);
+            const items = el.querySelectorAll('.sub-item');
+            items.forEach(i => i.style.display = i.style.display === 'block' ? 'none' : 'block');
+        }
+
+        // בחירת בניין - העברת נתונים למערכת
+        function selectProject(client, project) {
+            document.getElementById('client-name-display').innerText = client;
+            document.getElementById('project-name-display').innerText = "בניין: " + project;
+            document.getElementById('vault-title').innerText = "תיקיות בניין: " + project;
+            alert("הנתונים של " + project + " נטענו לעורך ולתיקיות");
+        }
+
+        // הוספת שורות אקסל
+        function addExcelRow() {
+            const tbody = document.getElementById('sheet-body');
+            const row = tbody.insertRow();
+            row.innerHTML = `<td>${tbody.rows.length}</td>
+                             <td><input type="text" style="width:100%; border:none;" placeholder="..."></td>
+                             <td><input type="number" value="1" style="width:100%; border:none; text-align:center;"></td>
+                             <td><input type="number" value="0" style="width:100%; border:none; text-align:center;"></td>
+                             <td style="font-weight:bold">0.00</td>`;
+        }
+
+        // גרפים (BI)
+        function initCharts() {
+            new Chart(document.getElementById('mainChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['ינואר', 'פברואר', 'מרץ', 'אפריל'],
+                    datasets: [{ label: 'הכנסות', data: [45, 52, 48, 70], backgroundColor: '#217346' }]
+                }
+            });
+            new Chart(document.getElementById('distChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['ריטיינר', 'קריאות', 'חלפים'],
+                    datasets: [{ data: [60, 25, 15], backgroundColor: ['#217346', '#0078d4', '#ff8c00'] }]
+                }
+            });
+        }
+
+        function filterTree() {
+            const val = document.getElementById('global-search').value.toLowerCase();
+            document.querySelectorAll('.tree-group').forEach(g => {
+                g.style.display = g.innerText.toLowerCase().includes(val) ? 'block' : 'none';
+            });
+        }
+    </script>
 </body>
 </html>
