@@ -1,40 +1,48 @@
 :root {
-    --win-blue: #0078d4;
-    --win-bg: #f3f2f1;
-    --win-green: #217346;
-    --win-hover: #edebe9;
-    --border: #d2d2d2;
+    --primary: #0078d4;
+    --bg: #f3f2f1;
+    --white: #ffffff;
+    --border: #edebe9;
+    --hover: #f3f2f1;
+    --text: #323130;
+    --danger: #a4262c;
 }
 
-* { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-body { margin: 0; background: var(--win-bg); display: flex; height: 100vh; overflow: hidden; direction: rtl; }
+* { box-sizing: border-box; font-family: 'Segoe UI', system-ui; }
+body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; }
 
-/* Sidebar */
-.sidebar { width: 250px; background: #fff; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-.sidebar-header { padding: 20px; font-weight: bold; border-bottom: 1px solid var(--border); background: #f9f9f9; }
+.os-container { display: flex; flex-direction: column; height: 100vh; }
 
-/* Main Content */
-.main-content { flex: 1; display: flex; flex-direction: column; background: #fff; }
+/* Ribbon */
+.win-ribbon { background: var(--white); border-bottom: 1px solid var(--border); padding: 10px; display: flex; gap: 10px; }
+.ribbon-group { display: flex; gap: 8px; padding: 0 10px; }
+.ribbon-divider { width: 1px; background: var(--border); margin: 5px 0; }
+.ribbon-btn { background: none; border: 1px solid transparent; padding: 10px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-width: 65px; font-size: 12px; }
+.ribbon-btn:hover { background: var(--hover); }
+.ribbon-btn.active { background: #e1dfdd; border-color: #8a8886; }
+.ribbon-btn .icon { font-size: 24px; margin-bottom: 4px; }
+.danger:hover { color: var(--danger); background: #fed9cc; }
 
-/* Ribbon Menu */
-.ribbon { background: #fff; border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; gap: 15px; }
-.r-btn { border: 1px solid transparent; background: none; cursor: pointer; padding: 10px; border-radius: 4px; font-size: 12px; display: flex; flex-direction: column; align-items: center; min-width: 80px; transition: 0.2s; }
-.r-btn:hover { background: var(--win-hover); border-color: #ccc; }
+/* Nav Bar */
+.win-nav-bar { background: var(--white); padding: 8px 15px; border-bottom: 1px solid var(--border); display: flex; gap: 20px; align-items: center; }
+.address-bar { flex: 1; display: flex; align-items: center; gap: 5px; font-size: 14px; color: var(--primary); }
+.breadcrumb-step { cursor: pointer; padding: 2px 5px; }
+.breadcrumb-step:hover { text-decoration: underline; background: var(--hover); }
 
-/* Address Bar / Breadcrumbs */
-.nav-bar { padding: 10px 20px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-size: 14px; }
-.breadcrumb-item { color: var(--win-blue); cursor: pointer; font-weight: 500; }
-.breadcrumb-item:hover { text-decoration: underline; }
+/* Explorer Grid */
+.win-content { flex: 1; overflow: auto; background: var(--white); }
+.explorer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 20px; display: none; }
+.explorer-grid.active { display: grid; }
 
-/* File Grid */
-.file-grid { flex: 1; padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; align-content: flex-start; overflow-y: auto; }
-.item-card { text-align: center; padding: 15px 10px; border: 1px solid transparent; cursor: pointer; border-radius: 5px; transition: 0.1s; position: relative; }
-.item-card:hover { background: #e5f3ff; border-color: #99d1ff; }
-.item-card.selected { background: #cce8ff; border-color: #66b3ff; }
-.item-icon { font-size: 45px; margin-bottom: 8px; display: block; }
-.item-name { font-size: 13px; word-break: break-all; outline: none; display: block; min-height: 1.2em; }
+.file-item { text-align: center; padding: 15px 5px; border: 1px solid transparent; border-radius: 4px; cursor: pointer; transition: 0.1s; }
+.file-item:hover { background: #e5f3ff; }
+.file-item.selected { background: #cce8ff; border-color: #99d1ff; }
+.file-item .icon { font-size: 48px; display: block; margin-bottom: 8px; }
+.file-item .name { font-size: 13px; word-break: break-all; }
 
-/* Excel View (Hidden by default) */
-#excel-view { display: none; padding: 20px; }
-.excel-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-.excel-table td, .excel-table th { border: 1px solid #ccc; padding: 8px; text-align: right; }
+/* Excel */
+.excel-container { display: none; padding: 30px; }
+.excel-container.active { display: block; }
+.excel-sheet { width: 100%; border-collapse: collapse; background: white; }
+.excel-sheet th, .excel-sheet td { border: 1px solid var(--border); padding: 10px; text-align: right; }
+.excel-sheet th { background: #faf9f8; }
