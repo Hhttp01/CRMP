@@ -1,118 +1,83 @@
-// מסד נתונים מקומי מורחב
-let db = {
-    clients: JSON.parse(localStorage.getItem('master_db')) || [
-        { id: 1, name: "אחזקות אביב", projects: ["מגדל המאה", "בניין הדרים"], debt: 4500 },
-        { id: 2, name: "קבוצת עזריאלי", projects: ["מגדל עגול", "מגדל משולש"], debt: 0 }
-    ],
-    archive: [],
-    settings: { vat: 0.17 }
-};
+// משתנים לניהול המיקום הנוכחי
+let currentPath = []; // מערך ששומר את התיקיות שעברנו בהן
+let folderStack = [currentData]; // מחסנית של רמות הנתונים (כדי לחזור אחורה)
 
-window.onload = () => {
-    renderTree();
-    initCharts();
-    setupDragAndDrop();
-};
+function renderExplorer() {
+    const grid = document.getElementById('file-grid');
+    const breadcrumb = document.getElementById('breadcrumb');
+    grid.innerHTML = '';
+    
+    // עדכון הנתיב בראש המסך (Breadcrumbs)
+    breadcrumb.innerHTML = '<span onclick="goBackTo(0)" style="cursor:pointer; color:blue;">מחשב זה</span>';
+    currentPath.forEach((folderName, index) => {
+        breadcrumb.innerHTML += ` > <span onclick="goBackTo(${index + 1})" style="cursor:pointer; color:blue;">${folderName}</span>`;
+    });
 
-// --- ניהול היררכיה וסייר ---
-function renderTree() {
-    const root = document.getElementById('tree-root');
-    root.innerHTML = '';
-    db.clients.forEach(client => {
-        const group = document.createElement('div');
-        group.className = 'tree-group';
-        group.innerHTML = `
-            <div class="tree-item client-node" onclick="toggleSub('${client.id}')">
-                <span class="folder-icon">📂</span> <strong>${client.name}</strong>
-                ${client.debt > 0 ? '<span class="debt-tag">חוב</span>' : ''}
-            </div>
-            <div id="subs-${client.id}" class="sub-container" style="display:none;">
-                ${client.projects.map(p => `
-                    <div class="tree-item sub-item" onclick="selectProject('${client.name}', '${p}')">
-                        <span class="building-icon">🏢</span> ${p}
-                    </div>
-                `).join('')}
-            </div>
+    // קבלת התיקייה הנוכחית מהמחסנית
+    const items = folderStack[folderStack.length - 1];
+
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'item-card';
+        if(selectedId === item.id) div.classList.add('selected');
+        
+        div.innerHTML = `
+            <div class="item-icon">${item.type === 'folder' ? '📁' : '📄'}</div>
+            <div class="item-name" id="name-${item.id}">${item.name}</div>
         `;
-        root.appendChild(group);
+
+        // לחיצה בודדת לבחירה
+        div.onclick = (e) => { 
+            e.stopPropagation(); 
+            selectedId = item.id;
+            renderExplorer(); 
+        };
+
+        // לחיצה כפולה לכניסה לתיקייה
+        div.ondblclick = () => {
+            if(item.type === 'folder') {
+                enterFolder(item);
+            }
+        };
+        
+        grid.appendChild(div);
     });
 }
 
-function toggleSub(id) {
-    const el = document.getElementById('subs-' + id);
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+function enterFolder(folder) {
+    currentPath.push(folder.name); // מוסיף את שם התיקייה לנתיב
+    folderStack.push(folder.children); // נכנס לרמת הנתונים הבאה
+    selectedId = null;
+    renderExplorer();
 }
 
-function selectProject(client, project) {
-    // עדכון כותרות בכל הדפים
-    document.getElementById('client-name-display').innerText = client;
-    document.getElementById('project-name-display').innerText = "נכס: " + project;
-    document.getElementById('vault-title').innerText = "כספת מסמכים: " + project;
-    
-    // סימון ויזואלי בסייר
-    document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('active-sub'));
-    event.currentTarget.classList.add('active-sub');
-    
-    // מעבר אוטומטי לעורך
-    switchView('editor');
+function goBackTo(index) {
+    // חוזר לרמה מסוימת בנתיב
+    currentPath = currentPath.slice(0, index);
+    folderStack = folderStack.slice(0, index + 1);
+    selectedId = null;
+    renderExplorer();
 }
 
-// --- עורך גליונות חכם (Excel Engine) ---
-function addExcelRow() {
-    const tbody = document.getElementById('sheet-body');
-    const row = tbody.insertRow();
-    row.innerHTML = `
-        <td>${tbody.rows.length}</td>
-        <td><input type="text" class="excel-in" onfocus="updateFormulaBar(this)" oninput="calculateTotal()"></td>
-        <td><input type="number" class="excel-in qty" value="1" oninput="calculateTotal()"></td>
-        <td><input type="number" class="excel-in prc" value="0" oninput="calculateTotal()"></td>
-        <td class="row-total">0.00</td>
-    `;
-}
-
-function calculateTotal() {
-    let subtotal = 0;
-    document.querySelectorAll('#sheet-body tr').forEach(row => {
-        const q = row.querySelector('.qty').value || 0;
-        const p = row.querySelector('.prc').value || 0;
-        const total = q * p;
-        row.querySelector('.row-total').innerText = total.toLocaleString() + " ₪";
-        subtotal += total;
-    });
-    // עדכון דאשבורד BI בזמן אמת (אוטונומי)
-    console.log("Subtotal updated:", subtotal);
-}
-
-// --- ניהול קבצים, תיקיות ומדיה ---
-function createNewFolder() {
-    const name = prompt("שם התיקייה החדשה:");
-    if (!name) return;
-    const grid = document.getElementById('file-system');
-    const folder = document.createElement('div');
-    folder.className = 'file-card folder';
-    folder.innerHTML = `📁 ${name} <span class="delete-file" onclick="this.parentElement.remove()">×</span>`;
-    grid.prepend(folder);
-}
-
-function setupDragAndDrop() {
-    const zone = document.getElementById('file-system');
-    zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('drag-over'); };
-    zone.ondragleave = () => zone.classList.remove('drag-over');
-    zone.ondrop = (e) => {
-        e.preventDefault();
-        zone.classList.remove('drag-over');
-        const files = e.dataTransfer.files;
-        handleFileUpload(files);
+// עדכון פונקציית יצירת תיקייה שתעבוד בתוך המיקום הנוכחי
+function createNew(type) {
+    const name = type === 'folder' ? "תיקייה חדשה" : "מסמך חדש.pdf";
+    const newItem = { 
+        id: Date.now(), 
+        name: name, 
+        type: type, 
+        children: type === 'folder' ? [] : null 
     };
+    
+    // מוסיף את הפריט לתיקייה הנוכחית שבה אנו נמצאים
+    folderStack[folderStack.length - 1].push(newItem);
+    renderExplorer();
 }
 
-function handleFileUpload(files) {
-    const grid = document.getElementById('file-system');
-    Array.from(files).forEach(file => {
-        const card = document.createElement('div');
-        card.className = 'file-card';
-        const icon = file.type.includes('video') ? '🎥' : file.type.includes('image') ? '🖼️' : '📄';
-        card.innerHTML = `${icon} ${file.name}`;
-        grid.appendChild(card);
-    });
-}
+// מחיקת פריט מהתיקייה הנוכחית
+function deleteSelected() {
+    if(!selectedId) return;
+    const currentItems = folderStack[folderStack.length - 1];
+    const index = currentItems.findIndex(i => i.id === selectedId);
+    if (index > -1) {
+        currentItems.splice(index
