@@ -2,260 +2,188 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Master System - חברת אחזקה אוטונומית</title>
+    <title>Master System - Windows Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --ex-green: #217346;
-            --ex-light-green: #eaf2ed;
-            --sidebar-width: 280px;
-            --header-height: 60px;
-            --bg-color: #f3f2f1;
+            --win-blue: #0078d4;
+            --win-bg: #f3f2f1;
+            --win-hover: #e1dfdd;
+            --win-green: #217346;
         }
 
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { margin: 0; background: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; background: var(--win-bg); display: flex; height: 100vh; overflow: hidden; }
 
-        /* סייר נכסים (היררכי) */
-        .excel-sidebar {
-            width: var(--sidebar-width);
-            background: white;
-            border-left: 1px solid #ddd;
-            display: flex;
-            flex-direction: column;
-            z-index: 100;
-        }
+        /* Sidebar - Tree View */
+        .sidebar { width: 280px; background: #fff; border-left: 1px solid #d2d2d2; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; background: #f8f8f8; font-weight: bold; border-bottom: 1px solid #d2d2d2; }
+        .tree-root { flex: 1; overflow-y: auto; padding: 10px; }
+        .tree-node { cursor: pointer; padding: 5px; border-radius: 3px; display: flex; align-items: center; gap: 8px; }
+        .tree-node:hover { background: var(--win-hover); }
+        .tree-children { margin-right: 20px; display: none; }
+        .tree-children.open { display: block; }
 
-        .sidebar-head { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
-        .search-box input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        /* Main Workspace */
+        .workspace { flex: 1; display: flex; flex-direction: column; }
+        .ribbon { height: 120px; background: #fff; border-bottom: 1px solid #d2d2d2; padding: 10px; display: flex; gap: 20px; }
+        .ribbon-group { border-left: 1px solid #eee; padding: 0 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+        .ribbon-btn { background: none; border: 1px solid transparent; cursor: pointer; padding: 5px; border-radius: 3px; text-align: center; width: 80px; font-size: 11px; }
+        .ribbon-btn:hover { background: var(--win-hover); border-color: #ccc; }
+        .ribbon-btn img { display: block; margin: 0 auto 5px; width: 24px; }
 
-        .tree-container { flex: 1; overflow-y: auto; padding: 10px; }
-        .tree-item { padding: 8px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
-        .tree-item:hover { background: var(--ex-light-green); }
-        .sub-item { padding-right: 25px; font-size: 13px; color: #555; display: none; }
+        /* Explorer View (Files & Folders) */
+        .explorer-view { flex: 1; padding: 20px; overflow-y: auto; background: #fff; }
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+        .item-card { text-align: center; padding: 10px; border: 1px solid transparent; cursor: pointer; position: relative; }
+        .item-card:hover { background: #e5f3ff; border-color: #99d1ff; }
+        .item-card.selected { background: #cce8ff; border-color: #66b3ff; }
+        .item-icon { font-size: 40px; margin-bottom: 5px; }
+        .item-name { font-size: 12px; word-break: break-all; outline: none; padding: 2px; }
 
-        /* אזור התוכן המרכזי */
-        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        /* Excel View */
+        .excel-view { display: none; flex: 1; padding: 20px; background: #fff; overflow-y: auto; }
+        .excel-table { width: 100%; border-collapse: collapse; border: 1px solid #ccc; }
+        .excel-table th, .excel-table td { border: 1px solid #ccc; padding: 8px; text-align: right; }
+        .excel-input { width: 100%; border: none; outline: none; }
 
-        header {
-            height: var(--header-height);
-            background: var(--ex-green);
-            color: white;
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            justify-content: space-between;
-        }
-
-        .nav-tabs { display: flex; gap: 10px; }
-        .nav-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 4px 4px 0 0;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .nav-btn.active { background: white; color: var(--ex-green); font-weight: bold; }
-
-        /* דפים (Views) */
-        .view { display: none; padding: 20px; height: calc(100vh - var(--header-height)); overflow-y: auto; }
-        .view.active { display: block; }
-
-        /* עורך גליונות (שדרוג 20) */
-        .formula-bar { display: flex; background: #eee; padding: 5px; border: 1px solid #ccc; margin-bottom: 10px; }
-        .sheet-container { background: white; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1000px; margin: 0 auto; }
-        .excel-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .excel-table th, .excel-table td { border: 1px solid #ddd; padding: 8px; }
-
-        /* דאשבורד BI (שדרוג 20) */
-        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
-        .kpi-card { background: white; padding: 20px; border-radius: 8px; text-align: center; border-top: 4px solid var(--ex-green); }
-        .chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; height: 350px; }
-        .glass { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-
-        /* ניהול מדיה וסייר קבצים (שדרוג 20) */
-        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .file-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; }
-        .file-card:hover { border-color: var(--ex-green); transform: translateY(-2px); transition: 0.2s; }
-        .folder { background: #fffde7; }
+        .active-view { display: block !important; }
+        
+        /* Context Menu */
+        #context-menu { position: absolute; background: #fff; border: 1px solid #ccc; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); display: none; z-index: 1000; }
+        #context-menu div { padding: 8px 20px; cursor: pointer; font-size: 13px; }
+        #context-menu div:hover { background: var(--win-blue); color: #fff; }
     </style>
 </head>
 <body>
 
-    <aside class="excel-sidebar">
-        <div class="sidebar-head">
-            <div class="search-box">
-                <input type="text" id="global-search" placeholder="🔍 חיפוש מהיר..." oninput="filterTree()">
-            </div>
-        </div>
-        <div class="tree-container" id="tree-root">
-            </div>
+    <aside class="sidebar">
+        <div class="sidebar-header">סייר הנכסים</div>
+        <div class="tree-root" id="tree-root"></div>
     </aside>
 
-    <main>
-        <header>
-            <div class="logo">MASTER SYSTEM v1.0 | <strong>ניהול אחזקה</strong></div>
-            <nav class="nav-tabs">
-                <button class="nav-btn active" onclick="switchView('dashboard')">דאשבורד BI</button>
-                <button class="nav-btn" onclick="switchView('editor')">עורך גליונות</button>
-                <button class="nav-btn" onclick="switchView('vault')">תיקיות ומדיה</button>
-            </nav>
-        </header>
+    <main class="workspace">
+        <nav class="ribbon">
+            <div class="ribbon-group">
+                <button class="ribbon-btn" onclick="createNew('folder')">📂<br>תיקייה חדשה</button>
+                <button class="ribbon-btn" onclick="document.getElementById('file-up').click()">📤<br>העלה קובץ</button>
+                <input type="file" id="file-up" hidden multiple onchange="uploadFiles(this.files)">
+            </div>
+            <div class="ribbon-group">
+                <button class="ribbon-btn" onclick="showView('explorer')">🖥️<br>תצוגת קבצים</button>
+                <button class="ribbon-btn" onclick="showView('excel')">📊<br>עורך אקסל</button>
+            </div>
+            <div class="ribbon-group">
+                <button class="ribbon-btn" onclick="deleteSelected()" style="color:red">🗑️<br>מחק פריט</button>
+                <button class="ribbon-btn" onclick="renameSelected()">✏️<br>שנה שם</button>
+            </div>
+        </nav>
 
-        <section id="view-dashboard" class="view active">
-            <div class="kpi-grid">
-                <div class="kpi-card"><span>הכנסות (ריטיינר)</span><h3>₪ 124,000</h3></div>
-                <div class="kpi-card" style="border-color: #d83b01"><span>חובות פתוחים</span><h3>₪ 18,500</h3></div>
-                <div class="kpi-card"><span>קריאות פתוחות</span><h3>14</h3></div>
-                <div class="kpi-card"><span>ניצול תקציב</span><h3>88%</h3></div>
-            </div>
-            <div class="chart-row">
-                <div class="glass"><canvas id="mainChart"></canvas></div>
-                <div class="glass"><canvas id="distChart"></canvas></div>
-            </div>
+        <section id="explorer" class="explorer-view active-view">
+            <div id="breadcrumb" style="padding-bottom: 15px; color: #666; font-size: 13px;">מחשב זה > לקוחות</div>
+            <div class="file-grid" id="file-grid"></div>
         </section>
 
-        <section id="view-editor" class="view">
-            <div class="formula-bar">
-                <div style="background:white; padding:5px 15px; border:1px solid #ccc; margin-left:10px;" id="cell-ref">A1</div>
-                <input type="text" id="formula-input" style="flex:1" placeholder="הקלד תוכן או נוסחה...">
-                <button onclick="addExcelRow()" style="margin-right:10px;">+ הוסף שורה</button>
-            </div>
-            <div class="sheet-container" id="sheet">
-                <div style="display:flex; justify-content:space-between; border-bottom:2px solid var(--ex-green); padding-bottom:10px;">
-                    <div>
-                        <h2 id="client-name-display">בחר לקוח מהסייר</h2>
-                        <p id="project-name-display">בחר בניין...</p>
-                    </div>
-                    <div style="text-align:left">
-                        <p>מספר מסמך: <strong>1089</strong></p>
-                        <p>תאריך: 31/12/2025</p>
-                    </div>
-                </div>
-                <table class="excel-table">
-                    <thead>
-                        <tr style="background:#f3f3f3">
-                            <th width="50">#</th>
-                            <th>תיאור עבודה/פריט</th>
-                            <th width="80">כמות</th>
-                            <th width="120">מחיר יחידה</th>
-                            <th width="120">סה"כ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sheet-body">
-                        </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section id="view-vault" class="view">
-            <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                <h2 id="vault-title">תיקיות בניין: כללי</h2>
-                <div>
-                    <button onclick="createNewFolder()">+ תיקייה חדשה</button>
-                    <button class="primary-btn" style="background:var(--ex-green); color:white; padding:10px;">📤 העלאת קבצים/סרטונים</button>
-                </div>
-            </div>
-            <div class="file-grid" id="file-system">
-                <div class="file-card folder">📁 בדיקות שנתיות</div>
-                <div class="file-card folder">📁 סרטוני טכנאים</div>
-                <div class="file-card folder">📁 חוזים ואישורים</div>
-                <div class="file-card">📄 אישור כיבוי אש.pdf</div>
-                <div class="file-card">🎥 תיקון גנרטור.mp4</div>
-            </div>
+        <section id="excel" class="excel-view">
+            <h2 id="excel-title">עורך מסמכים</h2>
+            <table class="excel-table">
+                <thead><tr style="background:#f3f3f3"><th>תיאור שירות</th><th>כמות</th><th>מחיר</th><th>סה"כ</th></tr></thead>
+                <tbody id="excel-body"></tbody>
+            </table>
         </section>
     </main>
 
+    <div id="context-menu">
+        <div onclick="renameSelected()">שנה שם (Rename)</div>
+        <div onclick="deleteSelected()" style="color:red">מחק (Delete)</div>
+        <div onclick="createNew('folder')">תיקייה חדשה</div>
+    </div>
+
     <script>
-        // בסיס נתונים דמו לשימוש ראשוני
-        const db = [
-            { id: 1, name: "אחזקות אביב", projects: ["מגדל המאה", "בניין הדרים"] },
-            { id: 2, name: "קבוצת עזריאלי", projects: ["מגדל עגול", "מגדל משולש"] }
+        let currentData = [
+            { id: 1, name: "אחזקות דרום", type: "folder", children: [
+                { id: 11, name: "בניין ריבלין 4", type: "folder", children: [] },
+                { id: 12, name: "חוזה_חתום.pdf", type: "file" }
+            ]},
+            { id: 2, name: "קבוצת עזריאלי", type: "folder", children: [] }
         ];
 
-        // אתחול המערכת
-        window.onload = () => {
-            renderTree();
-            initCharts();
-            for(let i=0; i<5; i++) addExcelRow();
+        let selectedId = null;
+
+        function renderExplorer(items) {
+            const grid = document.getElementById('file-grid');
+            grid.innerHTML = '';
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'item-card';
+                if(selectedId === item.id) div.classList.add('selected');
+                div.innerHTML = `
+                    <div class="item-icon">${item.type === 'folder' ? '📁' : '📄'}</div>
+                    <div class="item-name" contenteditable="false" id="name-${item.id}">${item.name}</div>
+                `;
+                div.onclick = (e) => { e.stopPropagation(); selectItem(item.id); };
+                div.ondblclick = () => { if(item.type === 'folder') renderExplorer(item.children); };
+                grid.appendChild(div);
+            });
+        }
+
+        function selectItem(id) {
+            selectedId = id;
+            renderExplorer(currentData); // Refresh selection
+        }
+
+        function createNew(type) {
+            const newItem = { id: Date.now(), name: "תיקייה חדשה", type: type, children: [] };
+            currentData.push(newItem);
+            renderExplorer(currentData);
+        }
+
+        function renameSelected() {
+            if(!selectedId) return;
+            const el = document.getElementById(`name-${selectedId}`);
+            el.contentEditable = true;
+            el.focus();
+            el.onblur = () => {
+                el.contentEditable = false;
+                const item = findById(currentData, selectedId);
+                item.name = el.innerText;
+            };
+        }
+
+        function deleteSelected() {
+            if(!selectedId) return;
+            currentData = currentData.filter(i => i.id !== selectedId);
+            selectedId = null;
+            renderExplorer(currentData);
+        }
+
+        function findById(arr, id) {
+            for (const item of arr) {
+                if (item.id === id) return item;
+                if (item.children) {
+                    const found = findById(item.children, id);
+                    if (found) return found;
+                }
+            }
+        }
+
+        function showView(view) {
+            document.querySelectorAll('section').forEach(s => s.classList.remove('active-view'));
+            document.getElementById(view).classList.add('active-view');
+        }
+
+        // Context Menu Logic
+        window.oncontextmenu = (e) => {
+            e.preventDefault();
+            const menu = document.getElementById('context-menu');
+            menu.style.display = 'block';
+            menu.style.top = e.pageY + 'px';
+            menu.style.left = e.pageX + 'px';
         };
 
-        // ניהול תצוגות
-        function switchView(viewId) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('view-' + viewId).classList.add('active');
-            event.target.classList.add('active');
-        }
+        window.onclick = () => { document.getElementById('context-menu').style.display = 'none'; };
 
-        // בניית סייר הנכסים
-        function renderTree() {
-            const root = document.getElementById('tree-root');
-            db.forEach(client => {
-                const group = document.createElement('div');
-                group.className = 'tree-group';
-                group.innerHTML = `<div class="tree-item" onclick="toggleSub('${client.id}')">📂 ${client.name}</div>`;
-                const subs = document.createElement('div');
-                subs.id = 'subs-' + client.id;
-                client.projects.forEach(p => {
-                    subs.innerHTML += `<div class="tree-item sub-item" onclick="selectProject('${client.name}', '${p}')">🏢 ${p}</div>`;
-                });
-                group.appendChild(subs);
-                root.appendChild(group);
-            });
-        }
-
-        function toggleSub(id) {
-            const el = document.getElementById('subs-' + id);
-            const items = el.querySelectorAll('.sub-item');
-            items.forEach(i => i.style.display = i.style.display === 'block' ? 'none' : 'block');
-        }
-
-        // בחירת בניין - העברת נתונים למערכת
-        function selectProject(client, project) {
-            document.getElementById('client-name-display').innerText = client;
-            document.getElementById('project-name-display').innerText = "בניין: " + project;
-            document.getElementById('vault-title').innerText = "תיקיות בניין: " + project;
-            alert("הנתונים של " + project + " נטענו לעורך ולתיקיות");
-        }
-
-        // הוספת שורות אקסל
-        function addExcelRow() {
-            const tbody = document.getElementById('sheet-body');
-            const row = tbody.insertRow();
-            row.innerHTML = `<td>${tbody.rows.length}</td>
-                             <td><input type="text" style="width:100%; border:none;" placeholder="..."></td>
-                             <td><input type="number" value="1" style="width:100%; border:none; text-align:center;"></td>
-                             <td><input type="number" value="0" style="width:100%; border:none; text-align:center;"></td>
-                             <td style="font-weight:bold">0.00</td>`;
-        }
-
-        // גרפים (BI)
-        function initCharts() {
-            new Chart(document.getElementById('mainChart'), {
-                type: 'bar',
-                data: {
-                    labels: ['ינואר', 'פברואר', 'מרץ', 'אפריל'],
-                    datasets: [{ label: 'הכנסות', data: [45, 52, 48, 70], backgroundColor: '#217346' }]
-                }
-            });
-            new Chart(document.getElementById('distChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['ריטיינר', 'קריאות', 'חלפים'],
-                    datasets: [{ data: [60, 25, 15], backgroundColor: ['#217346', '#0078d4', '#ff8c00'] }]
-                }
-            });
-        }
-
-        function filterTree() {
-            const val = document.getElementById('global-search').value.toLowerCase();
-            document.querySelectorAll('.tree-group').forEach(g => {
-                g.style.display = g.innerText.toLowerCase().includes(val) ? 'block' : 'none';
-            });
-        }
+        renderExplorer(currentData);
     </script>
 </body>
 </html>
