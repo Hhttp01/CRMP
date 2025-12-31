@@ -2,188 +2,248 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Master System - Windows Edition</title>
+    <title>Master System v1.0 - חלונות וניהול אחזקה</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --win-blue: #0078d4;
             --win-bg: #f3f2f1;
-            --win-hover: #e1dfdd;
             --win-green: #217346;
+            --win-hover: #edebe9;
+            --border: #d2d2d2;
         }
 
-        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
         body { margin: 0; background: var(--win-bg); display: flex; height: 100vh; overflow: hidden; }
 
         /* Sidebar - Tree View */
-        .sidebar { width: 280px; background: #fff; border-left: 1px solid #d2d2d2; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 15px; background: #f8f8f8; font-weight: bold; border-bottom: 1px solid #d2d2d2; }
-        .tree-root { flex: 1; overflow-y: auto; padding: 10px; }
-        .tree-node { cursor: pointer; padding: 5px; border-radius: 3px; display: flex; align-items: center; gap: 8px; }
+        .sidebar { width: 260px; background: #fff; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; background: #f8f8f8; font-weight: bold; border-bottom: 1px solid var(--border); }
+        .tree-root { flex: 1; overflow-y: auto; padding: 10px; font-size: 13px; }
+        .tree-node { cursor: pointer; padding: 6px; border-radius: 3px; display: flex; align-items: center; gap: 8px; }
         .tree-node:hover { background: var(--win-hover); }
-        .tree-children { margin-right: 20px; display: none; }
-        .tree-children.open { display: block; }
 
         /* Main Workspace */
         .workspace { flex: 1; display: flex; flex-direction: column; }
-        .ribbon { height: 120px; background: #fff; border-bottom: 1px solid #d2d2d2; padding: 10px; display: flex; gap: 20px; }
-        .ribbon-group { border-left: 1px solid #eee; padding: 0 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
-        .ribbon-btn { background: none; border: 1px solid transparent; cursor: pointer; padding: 5px; border-radius: 3px; text-align: center; width: 80px; font-size: 11px; }
-        .ribbon-btn:hover { background: var(--win-hover); border-color: #ccc; }
-        .ribbon-btn img { display: block; margin: 0 auto 5px; width: 24px; }
+        
+        /* Ribbon Navigation */
+        .ribbon { background: #fff; border-bottom: 1px solid var(--border); padding: 10px; display: flex; gap: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .ribbon-group { border-left: 1px solid #eee; padding: 0 15px; display: flex; align-items: center; gap: 10px; }
+        .r-btn { border: 1px solid transparent; background: none; cursor: pointer; padding: 8px; border-radius: 4px; font-size: 12px; display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+        .r-btn:hover { background: var(--win-hover); border-color: #ccc; }
+        .r-btn.active { background: var(--win-blue); color: #fff; }
 
-        /* Explorer View (Files & Folders) */
-        .explorer-view { flex: 1; padding: 20px; overflow-y: auto; background: #fff; }
-        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-        .item-card { text-align: center; padding: 10px; border: 1px solid transparent; cursor: pointer; position: relative; }
+        /* Search & Navigation Bar */
+        .nav-bar { background: #fff; padding: 8px 15px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 15px; }
+        .breadcrumb { flex: 1; font-size: 13px; color: #666; }
+        .search-box { width: 250px; }
+        .search-box input { width: 100%; padding: 5px 10px; border: 1px solid var(--border); border-radius: 3px; }
+
+        /* Views */
+        .view { flex: 1; padding: 20px; overflow-y: auto; display: none; }
+        .active-view { display: block; }
+
+        /* Explorer Grid */
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 15px; }
+        .item-card { text-align: center; padding: 10px; border: 1px solid transparent; cursor: pointer; border-radius: 4px; transition: 0.1s; }
         .item-card:hover { background: #e5f3ff; border-color: #99d1ff; }
         .item-card.selected { background: #cce8ff; border-color: #66b3ff; }
         .item-icon { font-size: 40px; margin-bottom: 5px; }
-        .item-name { font-size: 12px; word-break: break-all; outline: none; padding: 2px; }
+        .item-name { font-size: 12px; word-break: break-all; outline: none; }
 
-        /* Excel View */
-        .excel-view { display: none; flex: 1; padding: 20px; background: #fff; overflow-y: auto; }
-        .excel-table { width: 100%; border-collapse: collapse; border: 1px solid #ccc; }
-        .excel-table th, .excel-table td { border: 1px solid #ccc; padding: 8px; text-align: right; }
-        .excel-input { width: 100%; border: none; outline: none; }
+        /* Excel Sheet */
+        .excel-table { width: 100%; border-collapse: collapse; background: #fff; }
+        .excel-table th, .excel-table td { border: 1px solid var(--border); padding: 8px; text-align: right; }
+        .excel-input { width: 100%; border: none; outline: none; font-size: 14px; }
+        .excel-header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid var(--win-green); padding-bottom: 10px; }
 
-        .active-view { display: block !important; }
-        
+        /* BI Dashboard */
+        .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .kpi-card { background: #fff; padding: 20px; border-radius: 4px; border-top: 4px solid var(--win-green); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
         /* Context Menu */
-        #context-menu { position: absolute; background: #fff; border: 1px solid #ccc; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); display: none; z-index: 1000; }
-        #context-menu div { padding: 8px 20px; cursor: pointer; font-size: 13px; }
-        #context-menu div:hover { background: var(--win-blue); color: #fff; }
+        #ctx-menu { position: absolute; background: #fff; border: 1px solid #ccc; box-shadow: 2px 2px 8px rgba(0,0,0,0.15); display: none; z-index: 9999; min-width: 150px; }
+        #ctx-menu div { padding: 8px 15px; cursor: pointer; font-size: 13px; }
+        #ctx-menu div:hover { background: var(--win-blue); color: #fff; }
     </style>
 </head>
-<body>
+<body onclick="hideContext()" oncontextmenu="showContext(event)">
 
     <aside class="sidebar">
-        <div class="sidebar-header">סייר הנכסים</div>
-        <div class="tree-root" id="tree-root"></div>
+        <div class="sidebar-header">מערכת מאסטר 2030</div>
+        <div class="tree-root" id="sidebar-tree"></div>
     </aside>
 
     <main class="workspace">
         <nav class="ribbon">
             <div class="ribbon-group">
-                <button class="ribbon-btn" onclick="createNew('folder')">📂<br>תיקייה חדשה</button>
-                <button class="ribbon-btn" onclick="document.getElementById('file-up').click()">📤<br>העלה קובץ</button>
-                <input type="file" id="file-up" hidden multiple onchange="uploadFiles(this.files)">
+                <button class="r-btn" onclick="createNew('folder')">📁<br>תיקייה</button>
+                <button class="r-btn" onclick="createNew('file')">📄<br>מסמך</button>
             </div>
             <div class="ribbon-group">
-                <button class="ribbon-btn" onclick="showView('explorer')">🖥️<br>תצוגת קבצים</button>
-                <button class="ribbon-btn" onclick="showView('excel')">📊<br>עורך אקסל</button>
+                <button class="r-btn" onclick="switchTab('explorer')">🖥️<br>סייר</button>
+                <button class="r-btn" onclick="switchTab('excel')">📊<br>אקסל</button>
+                <button class="r-btn" onclick="switchTab('bi')">📈<br>דוחות BI</button>
             </div>
             <div class="ribbon-group">
-                <button class="ribbon-btn" onclick="deleteSelected()" style="color:red">🗑️<br>מחק פריט</button>
-                <button class="ribbon-btn" onclick="renameSelected()">✏️<br>שנה שם</button>
+                <button class="r-btn" onclick="renameItem()">✏️<br>שנה שם</button>
+                <button class="r-btn" onclick="deleteItem()" style="color:red">🗑️<br>מחק</button>
             </div>
         </nav>
 
-        <section id="explorer" class="explorer-view active-view">
-            <div id="breadcrumb" style="padding-bottom: 15px; color: #666; font-size: 13px;">מחשב זה > לקוחות</div>
-            <div class="file-grid" id="file-grid"></div>
+        <div class="nav-bar">
+            <div class="breadcrumb" id="breadcrumb">מחשב זה > לקוחות</div>
+            <div class="search-box">
+                <input type="text" id="main-search" placeholder="חיפוש מהיר בתיקיות..." oninput="searchFiles()">
+            </div>
+        </div>
+
+        <section id="view-explorer" class="view active-view">
+            <div class="file-grid" id="explorer-grid"></div>
         </section>
 
-        <section id="excel" class="excel-view">
-            <h2 id="excel-title">עורך מסמכים</h2>
+        <section id="view-excel" class="view">
+            <div class="excel-header">
+                <div><h2 id="ex-client">בחר לקוח</h2><p id="ex-project">בחר בניין בסייר</p></div>
+                <div style="text-align:left"><p>מספר: 1001</p><button onclick="addRow()">+ הוסף שורה</button></div>
+            </div>
             <table class="excel-table">
-                <thead><tr style="background:#f3f3f3"><th>תיאור שירות</th><th>כמות</th><th>מחיר</th><th>סה"כ</th></tr></thead>
+                <thead><tr style="background:#f3f3f3"><th>תיאור</th><th>כמות</th><th>מחיר</th><th>סה"כ</th></tr></thead>
                 <tbody id="excel-body"></tbody>
             </table>
         </section>
+
+        <section id="view-bi" class="view">
+            <div class="kpi-row">
+                <div class="kpi-card"><span>הכנסות</span><h3>₪ 124,500</h3></div>
+                <div class="kpi-card"><span>חובות</span><h3 style="color:red">₪ 12,000</h3></div>
+                <div class="kpi-card"><span>בניינים</span><h3>42</h3></div>
+                <div class="kpi-card"><span>קריאות</span><h3>8</h3></div>
+            </div>
+            <div style="background:#fff; padding:20px; height:300px;"><canvas id="biChart"></canvas></div>
+        </section>
     </main>
 
-    <div id="context-menu">
-        <div onclick="renameSelected()">שנה שם (Rename)</div>
-        <div onclick="deleteSelected()" style="color:red">מחק (Delete)</div>
+    <div id="ctx-menu">
+        <div onclick="renameItem()">שנה שם (F2)</div>
+        <div onclick="deleteItem()">מחק (Delete)</div>
         <div onclick="createNew('folder')">תיקייה חדשה</div>
     </div>
 
     <script>
-        let currentData = [
-            { id: 1, name: "אחזקות דרום", type: "folder", children: [
-                { id: 11, name: "בניין ריבלין 4", type: "folder", children: [] },
-                { id: 12, name: "חוזה_חתום.pdf", type: "file" }
+        // מבנה נתונים התחלתי
+        let fileSystem = [
+            { id: 1, name: "אחזקות אביב", type: "folder", children: [
+                { id: 11, name: "מגדל המאה", type: "folder", children: [] },
+                { id: 12, name: "בניין דקל", type: "folder", children: [] }
             ]},
             { id: 2, name: "קבוצת עזריאלי", type: "folder", children: [] }
         ];
 
+        let folderStack = [fileSystem];
+        let pathNames = [];
         let selectedId = null;
 
-        function renderExplorer(items) {
-            const grid = document.getElementById('file-grid');
+        // אתחול
+        window.onload = () => {
+            renderExplorer();
+            renderSidebar();
+            initChart();
+            for(let i=0; i<5; i++) addRow();
+        };
+
+        // רנדור סייר הקבצים
+        function renderExplorer() {
+            const grid = document.getElementById('explorer-grid');
+            const bc = document.getElementById('breadcrumb');
             grid.innerHTML = '';
-            items.forEach(item => {
+            
+            bc.innerHTML = '<span onclick="jumpTo(-1)" style="cursor:pointer; color:blue">מחשב זה</span>';
+            pathNames.forEach((n, i) => bc.innerHTML += ` > <span onclick="jumpTo(${i})" style="cursor:pointer; color:blue">${n}</span>`);
+
+            const currentLevel = folderStack[folderStack.length - 1];
+            currentLevel.forEach(item => {
                 const div = document.createElement('div');
-                div.className = 'item-card';
-                if(selectedId === item.id) div.classList.add('selected');
-                div.innerHTML = `
-                    <div class="item-icon">${item.type === 'folder' ? '📁' : '📄'}</div>
-                    <div class="item-name" contenteditable="false" id="name-${item.id}">${item.name}</div>
-                `;
-                div.onclick = (e) => { e.stopPropagation(); selectItem(item.id); };
-                div.ondblclick = () => { if(item.type === 'folder') renderExplorer(item.children); };
+                div.className = `item-card ${selectedId === item.id ? 'selected' : ''}`;
+                div.innerHTML = `<div class="item-icon">${item.type === 'folder' ? '📁' : '📄'}</div>
+                                 <div class="item-name" id="name-${item.id}" contenteditable="false">${item.name}</div>`;
+                
+                div.onclick = (e) => { e.stopPropagation(); selectedId = item.id; renderExplorer(); };
+                div.ondblclick = () => { if(item.type === 'folder') { folderStack.push(item.children); pathNames.push(item.name); renderExplorer(); updateExcelInfo(item.name); } };
                 grid.appendChild(div);
             });
         }
 
-        function selectItem(id) {
-            selectedId = id;
-            renderExplorer(currentData); // Refresh selection
+        function updateExcelInfo(name) {
+            document.getElementById('ex-project').innerText = "בניין: " + name;
+        }
+
+        function jumpTo(index) {
+            folderStack = folderStack.slice(0, index + 2);
+            pathNames = pathNames.slice(0, index + 1);
+            renderExplorer();
         }
 
         function createNew(type) {
-            const newItem = { id: Date.now(), name: "תיקייה חדשה", type: type, children: [] };
-            currentData.push(newItem);
-            renderExplorer(currentData);
+            const newItem = { id: Date.now(), name: type === 'folder' ? "תיקייה חדשה" : "מסמך חדש", type, children: type === 'folder' ? [] : null };
+            folderStack[folderStack.length - 1].push(newItem);
+            renderExplorer();
+            renderSidebar();
         }
 
-        function renameSelected() {
+        function deleteItem() {
+            if(!selectedId) return;
+            const current = folderStack[folderStack.length - 1];
+            const idx = current.findIndex(i => i.id === selectedId);
+            current.splice(idx, 1);
+            selectedId = null;
+            renderExplorer();
+            renderSidebar();
+        }
+
+        function renameItem() {
             if(!selectedId) return;
             const el = document.getElementById(`name-${selectedId}`);
             el.contentEditable = true;
             el.focus();
             el.onblur = () => {
                 el.contentEditable = false;
-                const item = findById(currentData, selectedId);
+                const item = folderStack[folderStack.length - 1].find(i => i.id === selectedId);
                 item.name = el.innerText;
+                renderSidebar();
             };
         }
 
-        function deleteSelected() {
-            if(!selectedId) return;
-            currentData = currentData.filter(i => i.id !== selectedId);
-            selectedId = null;
-            renderExplorer(currentData);
+        function switchTab(tab) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
+            document.getElementById('view-' + tab).classList.add('active-view');
         }
 
-        function findById(arr, id) {
-            for (const item of arr) {
-                if (item.id === id) return item;
-                if (item.children) {
-                    const found = findById(item.children, id);
-                    if (found) return found;
-                }
-            }
+        function addRow() {
+            const b = document.getElementById('excel-body');
+            const r = b.insertRow();
+            r.innerHTML = `<td><input class="excel-input" placeholder="..."></td><td><input class="excel-input" type="number" value="1"></td><td><input class="excel-input" type="number" value="0"></td><td>0.00</td>`;
         }
 
-        function showView(view) {
-            document.querySelectorAll('section').forEach(s => s.classList.remove('active-view'));
-            document.getElementById(view).classList.add('active-view');
+        function renderSidebar() {
+            const tree = document.getElementById('sidebar-tree');
+            tree.innerHTML = fileSystem.map(c => `<div class="tree-node">📂 ${c.name}</div>`).join('');
         }
 
-        // Context Menu Logic
-        window.oncontextmenu = (e) => {
+        function showContext(e) {
             e.preventDefault();
-            const menu = document.getElementById('context-menu');
-            menu.style.display = 'block';
-            menu.style.top = e.pageY + 'px';
-            menu.style.left = e.pageX + 'px';
-        };
+            const m = document.getElementById('ctx-menu');
+            m.style.display = 'block'; m.style.top = e.pageY + 'px'; m.style.left = e.pageX + 'px';
+        }
+        function hideContext() { document.getElementById('ctx-menu').style.display = 'none'; }
 
-        window.onclick = () => { document.getElementById('context-menu').style.display = 'none'; };
-
-        renderExplorer(currentData);
+        function initChart() {
+            new Chart(document.getElementById('biChart'), {
+                type: 'line',
+                data: { labels: ['ינו', 'פבר', 'מרץ', 'אפר'], datasets: [{ label: 'הכנסות', data: [12, 19, 15, 25], borderColor: '#217346' }] },
+                options: { maintainAspectRatio: false }
+            });
+        }
     </script>
 </body>
 </html>
