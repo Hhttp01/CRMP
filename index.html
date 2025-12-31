@@ -1,44 +1,77 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Master OS - Maintenance</title>
+    <title>Master System v2.0</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <aside class="sidebar">
-        <div class="sidebar-header">תפריט ניווט</div>
-        <div style="padding: 15px; font-size: 13px; color: #666;">
-            • ניהול בניינים<br>
-            • תיקיות מדיה<br>
-            • ארכיון דוחות
-        </div>
-    </aside>
+    <main class="os-container">
+        <header class="win-ribbon">
+            <div class="ribbon-group">
+                <button class="ribbon-btn" onclick="actions.create('folder')">
+                    <span class="icon">📁</span>
+                    <span>תיקייה</span>
+                </button>
+                <button class="ribbon-btn" onclick="actions.create('file')">
+                    <span class="icon">📄</span>
+                    <span>מסמך</span>
+                </button>
+            </div>
+            <div class="ribbon-divider"></div>
+            <div class="ribbon-group">
+                <button class="ribbon-btn" onclick="actions.rename()">
+                    <span class="icon">✏️</span>
+                    <span>שנה שם</span>
+                </button>
+                <button class="ribbon-btn danger" onclick="actions.delete()">
+                    <span class="icon">🗑️</span>
+                    <span>מחק</span>
+                </button>
+            </div>
+            <div class="ribbon-divider"></div>
+            <div class="ribbon-group">
+                <button class="ribbon-btn active" id="btn-explorer" onclick="navigation.switchTab('explorer')">
+                    <span class="icon">🖥️</span>
+                    <span>סייר</span>
+                </button>
+                <button class="ribbon-btn" id="btn-excel" onclick="navigation.switchTab('excel')">
+                    <span class="icon">📊</span>
+                    <span>אקסל</span>
+                </button>
+            </div>
+        </header>
 
-    <main class="main-content">
-        <nav class="ribbon">
-            <button class="r-btn" onclick="createNew('folder')">📁<br>תיקייה</button>
-            <button class="r-btn" onclick="createNew('file')">📄<br>קובץ</button>
-            <button class="r-btn" onclick="renameItem()">✏️<br>שנה שם</button>
-            <button class="r-btn" onclick="deleteItem()" style="color:red">🗑️<br>מחק</button>
-            <div style="border-right: 1px solid #ccc; margin: 0 10px;"></div>
-            <button class="r-btn" onclick="switchTab('explorer')">🖥️<br>סייר</button>
-            <button class="r-btn" onclick="switchTab('excel')">📊<br>אקסל</button>
+        <nav class="win-nav-bar">
+            <div class="address-bar" id="breadcrumbs">
+                </div>
+            <div class="search-box">
+                <input type="text" placeholder="חיפוש בתיקייה..." oninput="actions.search(this.value)">
+            </div>
         </nav>
 
-        <div class="nav-bar" id="breadcrumb"></div>
+        <section class="win-content">
+            <div id="view-explorer" class="explorer-grid active"></div>
 
-        <section id="explorer-view" class="file-grid"></section>
-
-        <section id="excel-view">
-            <h2>עורך גליונות אקסל</h2>
-            <table class="excel-table">
-                <thead><tr><th>תיאור</th><th>כמות</th><th>מחיר</th></tr></thead>
-                <tbody>
-                    <tr><td><input type="text" style="width:100%"></td><td>1</td><td>0</td></tr>
-                </tbody>
-            </table>
+            <div id="view-excel" class="excel-container">
+                <div class="excel-header">
+                    <h2 id="excel-target">נא לבחור בניין/קובץ בסייר</h2>
+                </div>
+                <table class="excel-sheet">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>תיאור עבודה</th>
+                            <th>כמות</th>
+                            <th>מחיר יחידה</th>
+                            <th>סה"כ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="excel-body">
+                        </tbody>
+                </table>
+            </div>
         </section>
     </main>
 
