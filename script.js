@@ -1,62 +1,55 @@
-// נתונים ראשוניים
+// מבנה הנתונים ההתחלתי
 let fileSystem = [
-    { id: 1, name: "אחזקות אביב", type: "folder", children: [] },
-    { id: 2, name: "קבוצת עזריאלי", type: "folder", children: [] }
+    { id: 1, name: "לקוחות", type: "folder", children: [
+        { id: 101, name: "אחזקות אביב", type: "folder", children: [] },
+        { id: 102, name: "קבוצת עזריאלי", type: "folder", children: [] }
+    ]},
+    { id: 2, name: "דוחות שנתיים", type: "folder", children: [] }
 ];
 
-// מנהל המיקום הנוכחי
-let folderStack = [fileSystem]; // מחסנית של רמות התיקיות
+let folderStack = [fileSystem]; // מחסנית התיקיות לניווט
 let pathNames = []; // שמות התיקיות בנתיב
 let selectedId = null;
 
 window.onload = () => {
     renderExplorer();
-    renderSidebar();
 };
 
-// הפונקציה המרכזית לרנדור הסייר
 function renderExplorer() {
-    const grid = document.getElementById('explorer-grid');
+    const grid = document.getElementById('file-grid');
     const bc = document.getElementById('breadcrumb');
     grid.innerHTML = '';
     
-    // 1. עדכון הנתיב (Breadcrumbs)
-    bc.innerHTML = '<span onclick="jumpTo(-1)" style="cursor:pointer; color:blue; text-decoration:underline;">מחשב זה</span>';
+    // רנדור נתיב הניווט (Breadcrumbs)
+    bc.innerHTML = '<span class="breadcrumb-item" onclick="jumpTo(-1)">מחשב זה</span>';
     pathNames.forEach((name, index) => {
-        bc.innerHTML += ` > <span onclick="jumpTo(${index})" style="cursor:pointer; color:blue; text-decoration:underline;">${name}</span>`;
+        bc.innerHTML += ` <span style="color:#aaa"> > </span> <span class="breadcrumb-item" onclick="jumpTo(${index})">${name}</span>`;
     });
 
-    // 2. קבלת הפריטים בתיקייה הנוכחית (הרמה האחרונה במחסנית)
-    const currentLevelItems = folderStack[folderStack.length - 1];
+    // קבלת הפריטים בתיקייה שבה אנחנו נמצאים כרגע
+    const currentItems = folderStack[folderStack.length - 1];
 
-    if (currentLevelItems.length === 0) {
-        grid.innerHTML = '<div style="padding:20px; color:#999;">תיקייה זו ריקה. השתמש בכפתורי הריבון למעלה כדי להוסיף קבצים.</div>';
-    }
-
-    currentLevelItems.forEach(item => {
+    currentItems.forEach(item => {
         const div = document.createElement('div');
         div.className = `item-card ${selectedId === item.id ? 'selected' : ''}`;
         
         div.innerHTML = `
-            <div class="item-icon">${item.type === 'folder' ? '📁' : '📄'}</div>
-            <div class="item-name" id="name-${item.id}">${item.name}</div>
+            <span class="item-icon">${item.type === 'folder' ? '📁' : '📄'}</span>
+            <span class="item-name" id="name-${item.id}">${item.name}</span>
         `;
 
-        // לחיצה אחת לבחירה
         div.onclick = (e) => {
             e.stopPropagation();
             selectedId = item.id;
-            renderExplorer(); // רענון כדי להציג בחירה
+            renderExplorer();
         };
 
-        // לחיצה כפולה לכניסה לתיקייה
         div.ondblclick = (e) => {
             if (item.type === 'folder') {
-                folderStack.push(item.children); // נכנסים פנימה ל-children של התיקייה
+                folderStack.push(item.children); // צלילה פנימה
                 pathNames.push(item.name);
                 selectedId = null;
                 renderExplorer();
-                updateExcelInfo(item.name); // עדכון דף האקסל על הבניין הנבחר
             }
         };
 
@@ -64,67 +57,56 @@ function renderExplorer() {
     });
 }
 
-// חזרה אחורה בנתיב
+function createNew(type) {
+    const currentLevel = folderStack[folderStack.length - 1];
+    const newId = Date.now();
+    const name = type === 'folder' ? "תיקייה חדשה" : "קובץ חדש";
+    
+    const newItem = { 
+        id: newId, 
+        name: name, 
+        type: type, 
+        children: type === 'folder' ? [] : null 
+    };
+
+    currentLevel.push(newItem);
+    selectedId = newId;
+    renderExplorer();
+}
+
 function jumpTo(index) {
-    // index -1 זה ה-Root
+    // חוזר לרמה שנבחרה בנתיב
     folderStack = folderStack.slice(0, index + 2);
     pathNames = pathNames.slice(0, index + 1);
     selectedId = null;
     renderExplorer();
 }
 
-// יצירת פריט חדש בתוך התיקייה שבה אנו נמצאים כרגע
-function createNew(type) {
-    const currentItems = folderStack[folderStack.length - 1];
-    const name = type === 'folder' ? "תיקייה חדשה" : "מסמך חדש";
-    
-    const newItem = { 
-        id: Date.now(), 
-        name: name, 
-        type: type, 
-        children: type === 'folder' ? [] : null 
-    };
-
-    currentItems.push(newItem);
-    renderExplorer();
-    renderSidebar();
-}
-
-// מחיקה מהתיקייה הנוכחית
 function deleteItem() {
-    if (!selectedId) {
-        alert("אנא בחר פריט למחיקה");
-        return;
-    }
-    const currentItems = folderStack[folderStack.length - 1];
-    const idx = currentItems.findIndex(i => i.id === selectedId);
-    
+    if (!selectedId) return;
+    const currentLevel = folderStack[folderStack.length - 1];
+    const idx = currentLevel.findIndex(i => i.id === selectedId);
     if (idx > -1) {
-        if (confirm("האם אתה בטוח שברצונך למחוק?")) {
-            currentItems.splice(idx, 1);
-            selectedId = null;
-            renderExplorer();
-            renderSidebar();
-        }
+        currentLevel.splice(idx, 1);
+        selectedId = null;
+        renderExplorer();
     }
 }
 
-// שינוי שם פריט נבחר
 function renameItem() {
     if (!selectedId) return;
-    const nameEl = document.getElementById(`name-${selectedId}`);
-    nameEl.contentEditable = true;
-    nameEl.style.background = "white";
-    nameEl.style.border = "1px solid blue";
-    nameEl.focus();
+    const el = document.getElementById(`name-${selectedId}`);
+    const currentLevel = folderStack[folderStack.length - 1];
+    const item = currentLevel.find(i => i.id === selectedId);
     
-    nameEl.onblur = () => {
-        nameEl.contentEditable = false;
-        nameEl.style.background = "transparent";
-        nameEl.style.border = "none";
-        const currentItems = folderStack[folderStack.length - 1];
-        const item = currentItems.find(i => i.id === selectedId);
-        item.name = nameEl.innerText;
-        renderSidebar();
-    };
+    const newName = prompt("הזן שם חדש:", item.name);
+    if (newName) {
+        item.name = newName;
+        renderExplorer();
+    }
+}
+
+function switchTab(view) {
+    document.getElementById('explorer-view').style.display = view === 'explorer' ? 'grid' : 'none';
+    document.getElementById('excel-view').style.display = view === 'excel' ? 'block' : 'none';
 }
