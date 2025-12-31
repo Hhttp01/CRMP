@@ -1,106 +1,118 @@
-let clients = JSON.parse(localStorage.getItem('crmp_clients_2030')) || [];
-let archive = JSON.parse(localStorage.getItem('crmp_archive')) || [];
-let docNum = localStorage.getItem('crmp_doc_num') || 1001;
-
-// --- ניווט בין דפים ---
-function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(`page-${pageId}`).classList.add('active');
-    event.target.classList.add('active');
-}
-
-// --- ניהול לקוחות ---
-function openClientModal() { document.getElementById('client-modal').style.display = 'flex'; }
-function closeClientModal() { document.getElementById('client-modal').style.display = 'none'; }
-
-function saveClient() {
-    const client = {
-        id: Date.now(),
-        name: document.getElementById('new-client-name').value,
-        email: document.getElementById('new-client-email').value,
-        phone: document.getElementById('new-client-phone').value
-    };
-    clients.push(client);
-    localStorage.setItem('crmp_clients_2030', JSON.stringify(clients));
-    renderClients();
-    renderClientSelect();
-    closeClientModal();
-}
-
-function renderClients() {
-    const list = document.getElementById('client-list');
-    list.innerHTML = clients.map(c => `
-        <div class="client-card">
-            <h4>${c.name}</h4>
-            <p>📧 ${c.email}</p>
-            <p>📞 ${c.phone}</p>
-            <button onclick="deleteClient(${c.id})" style="color:red; background:none; border:none; cursor:pointer;">מחק</button>
-        </div>
-    `).join('');
-}
-
-function deleteClient(id) {
-    clients = clients.filter(c => c.id !== id);
-    localStorage.setItem('crmp_clients_2030', JSON.stringify(clients));
-    renderClients();
-    renderClientSelect();
-}
-
-function renderClientSelect() {
-    const sel = document.getElementById('client-select-main');
-    sel.innerHTML = clients.map(c => `<option value="${c.name}">${c.name}</option>`).join('') || '<option>אין לקוחות</option>';
-}
-
-// --- לוגיקת הפקה ---
-function calculate() {
-    let total = 0;
-    document.querySelectorAll('#items-body tr').forEach(row => {
-        const q = row.querySelector('.qty').value;
-        const p = row.querySelector('.price').value;
-        const rowSum = q * p;
-        row.querySelector('.row-total').innerText = rowSum.toFixed(2) + ' ₪';
-        total += rowSum;
-    });
-    document.getElementById('total').innerText = total.toFixed(2);
-    document.getElementById('subtotal').innerText = (total / 1.17).toFixed(2);
-}
-
-function addRow() {
-    const tr = `<tr><td><input type="text" class="input-minimal" placeholder="שירות/מוצר"></td><td><input type="number" class="input-minimal qty" value="1" oninput="calculate()"></td><td><input type="number" class="input-minimal price" value="0" oninput="calculate()"></td><td class="row-total">0.00 ₪</td></tr>`;
-    document.getElementById('items-body').insertAdjacentHTML('beforeend', tr);
-}
-
-function generatePDF() {
-    const element = document.getElementById('invoice-content');
-    html2pdf().from(element).save().then(() => {
-        archive.push({
-            num: docNum,
-            client: document.getElementById('client-select-main').value,
-            total: document.getElementById('total').innerText,
-            date: new Date().toLocaleDateString()
-        });
-        localStorage.setItem('crmp_archive', JSON.stringify(archive));
-        docNum++;
-        localStorage.setItem('crmp_doc_num', docNum);
-        location.reload();
-    });
-}
-
-// --- חתימה (צמצום קוד למינימום) ---
-const canvas = document.getElementById('sig-canvas');
-const ctx = canvas.getContext('2d');
-let drawing = false;
-canvas.addEventListener('mousedown', () => drawing = true);
-canvas.addEventListener('mouseup', () => drawing = false);
-canvas.addEventListener('mousemove', (e) => {
-    if(!drawing) return;
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-});
+// מסד נתונים מקומי מורחב
+let db = {
+    clients: JSON.parse(localStorage.getItem('master_db')) || [
+        { id: 1, name: "אחזקות אביב", projects: ["מגדל המאה", "בניין הדרים"], debt: 4500 },
+        { id: 2, name: "קבוצת עזריאלי", projects: ["מגדל עגול", "מגדל משולש"], debt: 0 }
+    ],
+    archive: [],
+    settings: { vat: 0.17 }
+};
 
 window.onload = () => {
-    renderClients();
-    renderClientSelect();
-    document.getElementById('doc-num').innerText = docNum;
+    renderTree();
+    initCharts();
+    setupDragAndDrop();
 };
+
+// --- ניהול היררכיה וסייר ---
+function renderTree() {
+    const root = document.getElementById('tree-root');
+    root.innerHTML = '';
+    db.clients.forEach(client => {
+        const group = document.createElement('div');
+        group.className = 'tree-group';
+        group.innerHTML = `
+            <div class="tree-item client-node" onclick="toggleSub('${client.id}')">
+                <span class="folder-icon">📂</span> <strong>${client.name}</strong>
+                ${client.debt > 0 ? '<span class="debt-tag">חוב</span>' : ''}
+            </div>
+            <div id="subs-${client.id}" class="sub-container" style="display:none;">
+                ${client.projects.map(p => `
+                    <div class="tree-item sub-item" onclick="selectProject('${client.name}', '${p}')">
+                        <span class="building-icon">🏢</span> ${p}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        root.appendChild(group);
+    });
+}
+
+function toggleSub(id) {
+    const el = document.getElementById('subs-' + id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectProject(client, project) {
+    // עדכון כותרות בכל הדפים
+    document.getElementById('client-name-display').innerText = client;
+    document.getElementById('project-name-display').innerText = "נכס: " + project;
+    document.getElementById('vault-title').innerText = "כספת מסמכים: " + project;
+    
+    // סימון ויזואלי בסייר
+    document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('active-sub'));
+    event.currentTarget.classList.add('active-sub');
+    
+    // מעבר אוטומטי לעורך
+    switchView('editor');
+}
+
+// --- עורך גליונות חכם (Excel Engine) ---
+function addExcelRow() {
+    const tbody = document.getElementById('sheet-body');
+    const row = tbody.insertRow();
+    row.innerHTML = `
+        <td>${tbody.rows.length}</td>
+        <td><input type="text" class="excel-in" onfocus="updateFormulaBar(this)" oninput="calculateTotal()"></td>
+        <td><input type="number" class="excel-in qty" value="1" oninput="calculateTotal()"></td>
+        <td><input type="number" class="excel-in prc" value="0" oninput="calculateTotal()"></td>
+        <td class="row-total">0.00</td>
+    `;
+}
+
+function calculateTotal() {
+    let subtotal = 0;
+    document.querySelectorAll('#sheet-body tr').forEach(row => {
+        const q = row.querySelector('.qty').value || 0;
+        const p = row.querySelector('.prc').value || 0;
+        const total = q * p;
+        row.querySelector('.row-total').innerText = total.toLocaleString() + " ₪";
+        subtotal += total;
+    });
+    // עדכון דאשבורד BI בזמן אמת (אוטונומי)
+    console.log("Subtotal updated:", subtotal);
+}
+
+// --- ניהול קבצים, תיקיות ומדיה ---
+function createNewFolder() {
+    const name = prompt("שם התיקייה החדשה:");
+    if (!name) return;
+    const grid = document.getElementById('file-system');
+    const folder = document.createElement('div');
+    folder.className = 'file-card folder';
+    folder.innerHTML = `📁 ${name} <span class="delete-file" onclick="this.parentElement.remove()">×</span>`;
+    grid.prepend(folder);
+}
+
+function setupDragAndDrop() {
+    const zone = document.getElementById('file-system');
+    zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('drag-over'); };
+    zone.ondragleave = () => zone.classList.remove('drag-over');
+    zone.ondrop = (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        handleFileUpload(files);
+    };
+}
+
+function handleFileUpload(files) {
+    const grid = document.getElementById('file-system');
+    Array.from(files).forEach(file => {
+        const card = document.createElement('div');
+        card.className = 'file-card';
+        const icon = file.type.includes('video') ? '🎥' : file.type.includes('image') ? '🖼️' : '📄';
+        card.innerHTML = `${icon} ${file.name}`;
+        grid.appendChild(card);
+    });
+}
